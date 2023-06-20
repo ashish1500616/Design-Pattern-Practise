@@ -1,6 +1,7 @@
 package handlers;
 
-import com.sun.net.httpserver.Request;
+
+import models.Request;
 
 public class IdleHandler implements RequestHandler {
     @Override

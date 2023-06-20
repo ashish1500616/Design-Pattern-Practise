@@ -1,7 +1,7 @@
 package handlers;
 
-import com.sun.net.httpserver.Request;
 import manager.UserManager;
+import models.Request;
 
 public class AuthorizationHandler implements RequestHandler {
     private final RequestHandler nextRequestHandler;
@@ -14,9 +14,11 @@ public class AuthorizationHandler implements RequestHandler {
 
     @Override
     public void handle(Request request) {
-        if (!this.userManager.isSubscribed(request.getRequestHeaders().get("token"))) {
+        if (!this.userManager.isSubscribed(request.getRequestHeaders())) {
             throw new RuntimeException("Access Denied !!! . User is not subscribed.");
         }
+        System.out.println("Authorization Passed.");
         // so lets say this handler is the tail of the chain.(Linked List.)
+        this.nextRequestHandler.handle(request);
     }
 }

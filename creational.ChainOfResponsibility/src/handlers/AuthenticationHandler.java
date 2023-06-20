@@ -1,7 +1,7 @@
 package handlers;
 
-import com.sun.net.httpserver.Request;
 import manager.TokenManager;
+import models.Request;
 
 public class AuthenticationHandler implements RequestHandler {
 
@@ -19,6 +19,7 @@ public class AuthenticationHandler implements RequestHandler {
         if (!isValidEmail(email)) {
             throw new RuntimeException("Authentication Failed.");
         }
+        System.out.println("Authentication Passed.");
         this.nextRequestHandler.handle(request);
     }
 

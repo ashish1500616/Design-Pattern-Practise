@@ -1,6 +1,6 @@
 package handlers;
 
-import com.sun.net.httpserver.Request;
+import models.Request;
 
 public interface RequestHandler {
 

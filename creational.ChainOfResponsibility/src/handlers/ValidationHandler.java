@@ -1,6 +1,6 @@
 package handlers;
 
-import com.sun.net.httpserver.Request;
+import models.Request;
 
 public class ValidationHandler implements RequestHandler {
     private final RequestHandler nextRequestHandler;
@@ -16,7 +16,7 @@ public class ValidationHandler implements RequestHandler {
             throw new IllegalArgumentException("Empty Header");
         }
         // Add Other Sanity Checks.
-        System.out.print("Validation Passed.");
+        System.out.println("Validation Passed.");
         this.nextRequestHandler.handle(request);
     }
 }
