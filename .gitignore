@@ -1,0 +1,33 @@
+# IntelliJ IDEA files
+.idea/
+
+# Compiled class files
+*.class
+
+# Compiled Java bytecode
+*.iml
+*.ipr
+*.iws
+
+# Logs
+*.log
+
+# Gradle build directories
+build/
+
+# Maven build directories
+target/
+
+# Directory for storing project-wide settings (Shared across team members)
+.idea/workspace.xml
+
+# Local history of changes stored by IntelliJ IDEA
+.idea/misc.xml
+
+# File-based project format for IntelliJ IDEA
+*.ipr
+*.iws
+*.iml
+
+# JUnit testing framework
+.idea/libraries
