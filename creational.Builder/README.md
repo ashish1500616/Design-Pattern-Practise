@@ -126,6 +126,247 @@ public class Product {
 }
 ```
 
+## 4. Anti-patterns and Solutions
+
+### 1. Telescoping Constructors
+❌ **Problem**:
+```java
+public class Pizza {
+    public Pizza(String size) { ... }
+    public Pizza(String size, boolean cheese) { ... }
+    public Pizza(String size, boolean cheese, boolean pepperoni) { ... }
+    public Pizza(String size, boolean cheese, boolean pepperoni, boolean mushrooms) { ... }
+}
+
+// Usage - Unclear what the booleans represent
+Pizza pizza = new Pizza("large", true, false, true);
+```
+
+✅ **Solution**:
+```java
+public class Pizza {
+    private Pizza(PizzaBuilder builder) { ... }
+    
+    public static class PizzaBuilder {
+        public PizzaBuilder size(String size) { ... }
+        public PizzaBuilder addCheese() { ... }
+        public PizzaBuilder addPepperoni() { ... }
+        public PizzaBuilder addMushrooms() { ... }
+    }
+}
+
+// Usage - Clear and readable
+Pizza pizza = new PizzaBuilder()
+    .size("large")
+    .addCheese()
+    .addMushrooms()
+    .build();
+```
+
+### 2. Object State Validation
+❌ **Problem**:
+```java
+public class User {
+    private String email;
+    private String password;
+    
+    public User(String email, String password) {
+        this.email = email;
+        this.password = password;
+        // No validation at construction time
+    }
+}
+
+// Invalid state possible
+User user = new User("invalid-email", "");
+```
+
+✅ **Solution**:
+```java
+public class User {
+    private final String email;
+    private final String password;
+    
+    private User(UserBuilder builder) {
+        this.email = builder.email;
+        this.password = builder.password;
+    }
+    
+    public static class UserBuilder {
+        public User build() {
+            validateEmail(email);
+            validatePassword(password);
+            return new User(this);
+        }
+        
+        private void validateEmail(String email) {
+            if (!email.contains("@")) {
+                throw new IllegalArgumentException("Invalid email");
+            }
+        }
+    }
+}
+
+// Validation enforced at build time
+User user = new UserBuilder()
+    .email("valid@email.com")
+    .password("secure123")
+    .build();
+```
+
+### 3. Immutability
+❌ **Problem**:
+```java
+public class Configuration {
+    private List<String> settings;
+    
+    public Configuration(List<String> settings) {
+        this.settings = settings; // Direct reference
+    }
+    
+    // State can be modified after creation
+    public List<String> getSettings() {
+        return settings;
+    }
+}
+```
+
+✅ **Solution**:
+```java
+public class Configuration {
+    private final List<String> settings;
+    
+    private Configuration(ConfigBuilder builder) {
+        this.settings = List.copyOf(builder.settings); // Immutable copy
+    }
+    
+    public List<String> getSettings() {
+        return List.copyOf(settings); // Defensive copy
+    }
+    
+    public static class ConfigBuilder {
+        private List<String> settings = new ArrayList<>();
+        
+        public ConfigBuilder addSetting(String setting) {
+            settings.add(setting);
+            return this;
+        }
+    }
+}
+```
+
+### 4. Step-by-Step Construction
+❌ **Problem**:
+```java
+public class Document {
+    public Document(String title, String content, String author, 
+                   String format, boolean encrypted) {
+        // All parameters must be provided at once
+        // Hard to understand the construction process
+    }
+}
+```
+
+✅ **Solution**:
+```java
+public class Document {
+    public static class DocumentBuilder {
+        public DocumentBuilder beginDocument(String title) {
+            validateTitle(title);
+            return this;
+        }
+        
+        public DocumentBuilder addContent(String content) {
+            validateContent(content);
+            return this;
+        }
+        
+        public DocumentBuilder signBy(String author) {
+            validateAuthor(author);
+            return this;
+        }
+        
+        public DocumentBuilder formatAs(String format) {
+            validateFormat(format);
+            return this;
+        }
+        
+        public Document build() {
+            return encrypted ? 
+                encryptAndBuild() : 
+                buildPlaintext();
+        }
+    }
+}
+
+// Clear construction steps
+Document doc = new DocumentBuilder()
+    .beginDocument("Title")
+    .addContent("Content")
+    .signBy("Author")
+    .formatAs("PDF")
+    .encrypt()
+    .build();
+```
+
+### 5. Optional Parameters
+❌ **Problem**:
+```java
+public class Report {
+    public Report(String title, String data) {
+        // Required parameters
+    }
+    
+    public void setFooter(String footer) { ... }
+    public void setHeader(String header) { ... }
+    public void setPageNumbers(boolean show) { ... }
+    // Object in potentially incomplete state
+}
+```
+
+✅ **Solution**:
+```java
+public class Report {
+    private Report(ReportBuilder builder) {
+        // All fields set at once
+    }
+    
+    public static class ReportBuilder {
+        private final String title;  // Required
+        private final String data;   // Required
+        private String footer;       // Optional
+        private String header;       // Optional
+        private boolean showPageNumbers; // Optional
+        
+        public ReportBuilder(String title, String data) {
+            this.title = Objects.requireNonNull(title);
+            this.data = Objects.requireNonNull(data);
+        }
+        
+        public ReportBuilder withFooter(String footer) {
+            this.footer = footer;
+            return this;
+        }
+        
+        public ReportBuilder withHeader(String header) {
+            this.header = header;
+            return this;
+        }
+        
+        public ReportBuilder showPageNumbers() {
+            this.showPageNumbers = true;
+            return this;
+        }
+    }
+}
+
+// Clear which parameters are optional
+Report report = new ReportBuilder("Q1 Report", "Data")
+    .withHeader("Company Name")
+    .showPageNumbers()
+    .build();
+```
+
 ## 5. Interview Questions
 
 ### Q1: What problem does the Builder pattern solve?
