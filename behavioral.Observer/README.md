@@ -2,27 +2,40 @@
 
 ## 1. Overview
 
-### What is Observer Pattern?
-The Observer pattern defines a one-to-many dependency between objects where a state change in one object automatically notifies and updates all its dependents. In our implementation, we demonstrate this through a job notification system where job seekers (observers) get notified about new job postings from an employment agency (subject).
+### What is the Observer Pattern?
 
-### Components
-1. **Subject/Observable**
-   - Maintains list of observers
-   - Methods to attach/detach observers
-   - Notifies observers of state changes
+The Observer pattern establishes a one-to-many dependency between objects. When the state of one object (the subject) changes, all its dependents (observers) are automatically notified and updated. This pattern is crucial for building decoupled systems where components can react to state changes without tightly binding to the source of those changes.
 
-2. **Observer**
-   - Defines updating interface
-   - Receives updates from subject
+In this guide, we illustrate the Observer pattern through a job notification system. Here, an employment agency (the subject) notifies job seekers (observers) about new job postings.
 
-3. **Concrete Subject**
-   - EmploymentAgency implementation
-   - Manages observer list
-   - Sends notifications
+### Key Components
 
-4. **Concrete Observer**
-   - JobSeeker implementation
-   - Receives and processes updates
+1.  **Subject (Observable)**
+    *   Maintains a list of observers.
+    *   Provides methods to attach and detach observers.
+    *   Notifies observers when a state change occurs.
+
+2.  **Observer**
+    *   Defines an interface for receiving update notifications.
+    *   Receives updates from the subject.
+
+3.  **Concrete Subject**
+    *   Implements the Subject interface.
+    *   Manages the list of observers.
+    *   Sends notifications to observers when its state changes.
+    *   Example: `EmploymentAgency`
+
+4.  **Concrete Observer**
+    *   Implements the Observer interface.
+    *   Receives and processes updates from the subject.
+    *   Example: `JobSeeker`
+
+### Workflow
+
+1.  Observers register with the Subject.
+2.  The Subject's state changes.
+3.  The Subject notifies all registered Observers.
+4.  Each Observer updates its state accordingly.
 
 ### Correct Implementation vs. Violations
 
@@ -247,6 +260,230 @@ public void notify(JobPost jobPosting) {
             // Continue with other observers
         }
     });
+}
+```
+
+## 2. Common Anti-patterns and Solutions
+
+### 1. Tight Coupling Anti-pattern
+❌ **Problem:**
+```java
+// Anti-pattern: Direct coupling between subject and observers
+public class NewsAgency {
+    private NewsSubscriber subscriber1;
+    private NewsSubscriber subscriber2;
+    
+    public void publishNews(String news) {
+        subscriber1.receiveNews(news);
+        subscriber2.receiveNews(news);
+    }
+}
+```
+
+✅ **Solution:**
+```java
+// Solution: Using Observer interface and dynamic observer list
+public interface Observer {
+    void update(String news);
+}
+
+public class NewsAgency {
+    private List<Observer> observers = new ArrayList<>();
+    
+    public void attach(Observer observer) {
+        observers.add(observer);
+    }
+    
+    public void publishNews(String news) {
+        observers.forEach(observer -> observer.update(news));
+    }
+}
+```
+
+### 2. Memory Leak Anti-pattern
+❌ **Problem:**
+```java
+// Anti-pattern: No way to remove observers
+public class EventManager {
+    private List<Observer> observers = new ArrayList<>();
+    
+    public void subscribe(Observer observer) {
+        observers.add(observer);
+    }
+    // Missing unsubscribe method leads to memory leaks
+}
+```
+
+✅ **Solution:**
+```java
+public class EventManager {
+    private List<WeakReference<Observer>> observers = new ArrayList<>();
+    
+    public void subscribe(Observer observer) {
+        observers.add(new WeakReference<>(observer));
+    }
+    
+    public void unsubscribe(Observer observer) {
+        observers.removeIf(ref -> ref.get() == null || ref.get() == observer);
+    }
+}
+```
+
+### 3. Thread-Safety Anti-pattern
+❌ **Problem:**
+```java
+// Anti-pattern: Not thread-safe
+public class StockMarket {
+    private List<Observer> observers = new ArrayList<>();
+    
+    public void addObserver(Observer o) {
+        observers.add(o);  // Not thread-safe
+    }
+    
+    public void notifyPrice(double price) {
+        observers.forEach(o -> o.update(price));  // May throw ConcurrentModificationException
+    }
+}
+```
+
+✅ **Solution:**
+```java
+public class StockMarket {
+    private final List<Observer> observers = Collections.synchronizedList(new ArrayList<>());
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    
+    public void addObserver(Observer o) {
+        lock.writeLock().lock();
+        try {
+            observers.add(o);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    public void notifyPrice(double price) {
+        lock.readLock().lock();
+        try {
+            observers.forEach(o -> o.update(price));
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+}
+```
+
+### 4. State Inconsistency Anti-pattern
+❌ **Problem:**
+```java
+// Anti-pattern: Inconsistent state during updates
+public class WeatherStation {
+    private float temperature;
+    private float humidity;
+    
+    public void setMeasurements(float temperature, float humidity) {
+        this.temperature = temperature;
+        notifyObservers();  // Observers get notified with incomplete state
+        this.humidity = humidity;
+        notifyObservers();  // Duplicate notifications
+    }
+}
+```
+
+✅ **Solution:**
+```java
+public class WeatherStation {
+    private WeatherData weatherData;
+    
+    public void setMeasurements(float temperature, float humidity) {
+        weatherData = new WeatherData(temperature, humidity);
+        notifyObservers(weatherData);  // Atomic update with complete state
+    }
+}
+```
+
+### 5. Notification Order Dependency Anti-pattern
+❌ **Problem:**
+```java
+// Anti-pattern: Observers depend on notification order
+public class OrderSystem {
+    private List<Observer> observers = new ArrayList<>();
+    
+    public void processOrder(Order order) {
+        // Observers assume specific notification order
+        observers.get(0).update(order);  // Validation
+        observers.get(1).update(order);  // Processing
+        observers.get(2).update(order);  // Notification
+    }
+}
+```
+
+✅ **Solution:**
+```java
+public class OrderSystem {
+    private Map<Priority, List<Observer>> prioritizedObservers = new EnumMap<>(Priority.class);
+    
+    public void processOrder(Order order) {
+        // Process observers based on priority, not position
+        Arrays.stream(Priority.values())
+              .forEach(priority -> 
+                  prioritizedObservers.getOrDefault(priority, Collections.emptyList())
+                                    .forEach(observer -> observer.update(order))
+              );
+    }
+}
+```
+
+### 6. Expensive Operation in Notification Anti-pattern
+❌ **Problem:**
+```java
+// Anti-pattern: Blocking operations in notification
+public class DataCenter {
+    public void notifyObservers(ServerStatus status) {
+        observers.forEach(observer -> {
+            observer.processStatus(status);  // Might be slow/blocking
+        });
+    }
+}
+```
+
+✅ **Solution:**
+```java
+public class DataCenter {
+    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
+    
+    public void notifyObservers(ServerStatus status) {
+        observers.forEach(observer -> 
+            executorService.submit(() -> observer.processStatus(status))
+        );
+    }
+}
+```
+
+### 7. Exception Handling Anti-pattern
+❌ **Problem:**
+```java
+// Anti-pattern: No exception handling
+public class NewsPublisher {
+    public void notifyObservers(News news) {
+        observers.forEach(observer -> observer.onNews(news));
+        // One failed observer breaks the chain
+    }
+}
+```
+
+✅ **Solution:**
+```java
+public class NewsPublisher {
+    public void notifyObservers(News news) {
+        observers.forEach(observer -> {
+            try {
+                observer.onNews(news);
+            } catch (Exception e) {
+                logger.error("Failed to notify observer: " + observer, e);
+                // Continue with other observers
+            }
+        });
+    }
 }
 ```
 
