@@ -33,17 +33,17 @@ The Singleton pattern ensures that a class has only one instance and provides a 
 
 ## Decision Framework: Is Singleton the Right Choice?
 
-Use the Singleton pattern when:
-
-1.  **Global State Required?**
-    ├── NO → Use a Regular Class
-    └── YES → Continue to #2
-2.  **Resource-Heavy Object?**
-    ├── NO → Consider a Static Class
-    └── YES → Continue to #3
-3.  **Controlled Access Needed?**
-    ├── NO → Consider Alternative Pattern
-    └── YES → Use Singleton Pattern ✓
+Do you need to ensure exactly one instance?
+├── No → Use Regular Class/Static Methods
+└── Yes → Is global state necessary?
+    ├── No → Consider Dependency Injection
+    └── Yes → Is the object resource-intensive?
+        ├── No → Use Static Class
+        └── Yes → Does it need lazy initialization?
+            ├── No → Use Eager Singleton
+            └── Yes → Need thread safety?
+                ├── No → Use Simple Singleton
+                └── Yes → Use Double-Checked Singleton ✅
 
 ### Detailed Decision Criteria
 
@@ -347,6 +347,4 @@ class PresidentIntegrationTest {
         assertEquals("Active", President.getInstance().getState());
     }
 }
-```
-
 This implementation demonstrates a robust, thread-safe Singleton pattern that protects against common pitfalls while maintaining clean code principles and testability.
